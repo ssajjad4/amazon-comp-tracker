@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Amazon Comp Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c0f;--bg2:#111318;--bg3:#181c22;--bg4:#1e2430;
+  --border:#2a3040;--border2:#3a4455;
+  --text:#e8ecf2;--text2:#8a9bb5;--text3:#5a6a80;
+  --accent:#ff9500;--accent2:#ffb84d;--accentbg:rgba(255,149,0,0.1);
+  --green:#00d084;--greenbg:rgba(0,208,132,0.1);
+  --blue:#4d9eff;--bluebg:rgba(77,158,255,0.1);
+  --red:#ff5555;--redbg:rgba(255,85,85,0.1);
+  --radius:8px;--radius2:12px;
+  --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh}
+a{color:var(--blue)}
+input,select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:var(--font);font-size:13px;width:100%;outline:none;transition:border 0.15s}
+input:focus,select:focus{border-color:var(--accent)}
+input[type=number],input[type=date]{font-family:var(--mono)}
+button{cursor:pointer;font-family:var(--font);border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);padding:7px 14px;font-size:13px;transition:all 0.15s}
+button:hover{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+button.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+button.primary:hover{background:var(--accent2)}
+button.danger{border-color:var(--red);color:var(--red);background:transparent}
+button.danger:hover{background:var(--redbg)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mono)}
+.badge.live{background:var(--greenbg);color:var(--green);border:1px solid rgba(0,208,132,0.3)}
+.badge.manual{background:var(--redbg);color:var(--red);border:1px solid rgba(255,85,85,0.3)}
+.badge.warn{background:var(--accentbg);color:var(--accent);border:1px solid rgba(255,149,0,0.3)}
+.badge.info{background:var(--bluebg);color:var(--blue);border:1px solid rgba(77,158,255,0.3)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;background:currentColor}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:10px 14px;text-align:left;color:var(--text3);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;white-space:nowrap}
+tbody td:first-child{font-family:var(--font);font-size:13px}
+tbody tr:hover td{background:var(--bg3)}
+tbody tr.cur td{background:rgba(255,149,0,0.05)}
+tbody tr.cur td:first-child{border-left:2px solid var(--accent)}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.toggle-wrap{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.tslider{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;cursor:pointer;transition:0.2s}
+.tslider::before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--text3);border-radius:50%;transition:0.2s}
+.toggle input:checked+.tslider{background:var(--accent);border-color:var(--accent)}
+.toggle input:checked+.tslider::before{transform:translateX(18px);background:#000}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.sec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:16px}
+.mc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc.orange::before{background:var(--accent)}
+.mc.green::before{background:var(--green)}
+.mc.blue::before{background:var(--blue)}
+.mc.gray::before{background:var(--border2)}
+.mc-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
+.mc-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);line-height:1.2}
+.mc-sub{font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.irow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.igrp{display:flex;flex-direction:column;gap:6px}
+.ilabel{font-size:12px;color:var(--text2);font-weight:500}
+.disclaimer{font-size:11px;color:var(--text3);padding:10px 14px;background:var(--bg3);border-radius:var(--radius);border-left:2px solid var(--border2);margin-top:8px;line-height:1.6}
+.tag{display:inline-flex;align-items:center;padding:3px 8px;background:var(--bg4);border-radius:4px;font-size:11px;font-family:var(--mono);color:var(--text2);border:1px solid var(--border)}
+.pbar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:8px}
+.pfill{height:100%;border-radius:3px;background:var(--accent);transition:width 0.5s}
+#nav{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);padding:4px;border-radius:var(--radius);border:1px solid var(--border)}
+#nav button{flex:1;border:1px solid transparent;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:500;color:var(--text3);background:transparent}
+#nav button.active{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+#nav button:hover:not(.active){color:var(--text2);background:transparent;border-color:transparent}
+.warn-box{padding:10px 14px;background:rgba(255,85,85,0.08);border:1px solid rgba(255,85,85,0.2);border-radius:var(--radius);margin-bottom:16px;font-size:12px;color:var(--red)}
+.info-box{padding:10px 14px;background:var(--bluebg);border:1px solid rgba(77,158,255,0.2);border-radius:var(--radius);margin-bottom:16px;font-size:12px;color:var(--blue)}
+.wrap{max-width:960px;margin:0 auto;padding:20px 20px 60px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.logo{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.03em}
+.logo span{color:var(--accent)}
+.logo small{font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;letter-spacing:0}
+.price-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tab{display:none}
+.tab.active{display:block}
+.hidden{display:none!important}
+@media(max-width:640px){
+  .g4{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr}
+  .irow{grid-template-columns:1fr}
+  .mc-val{font-size:18px}
+}
+@media(max-width:400px){
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Header -->
+  <header>
+    <div>
+      <div class="logo"><span>amzn</span>.comp<small>tracker</small></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">Amazon 4-year compensation dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="price-chip">
+        <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">AMZN</span>
+        <span id="priceDisplay" style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text)">loading…</span>
+        <span id="sourceBadge" class="badge info"><span class="dot"></span>fetching</span>
+      </div>
+      <div id="fxChip" class="price-chip hidden" style="font-family:var(--mono);font-size:12px;color:var(--text2)"></div>
+      <button id="btnRefresh" onclick="refreshMarket()">↻ refresh</button>
+      <span id="lastUpdated" style="font-size:10px;color:var(--text3)"></span>
+    </div>
+  </header>
+
+  <!-- Nav -->
+  <div id="nav">
+    <button class="active" onclick="switchTab('dashboard',this)">Dashboard</button>
+    <button onclick="switchTab('inputs',this)">Inputs</button>
+    <button onclick="switchTab('schedule',this)">Schedule</button>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div id="tab-dashboard" class="tab active">
+    <div id="offlineWarn" class="warn-box hidden">
+      ⚠ Could not fetch live market data. Add your free Finnhub API key in Inputs, or enable manual override.
+      <button onclick="switchTab('inputs',document.querySelectorAll('#nav button')[1])" style="margin-left:8px;padding:2px 8px;font-size:11px;border-color:var(--red);color:var(--red);background:transparent">Go to Inputs →</button>
+    </div>
+    <div id="futureBox" style="display:none" class="section" style="border-color:rgba(255,149,0,0.3);margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Future share price estimates (by year)</div>
+      </div>
+      <div class="g4" id="futurePriceInputs"></div>
+    </div>
+    <div id="preStartBox" class="info-box hidden">📅 Your start date is in the future. Dashboard shows projected compensation.</div>
+
+    <!-- Current year progress -->
+    <div id="curYearSection" class="section" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Current compensation year</div>
+        <span id="curYearTag" class="tag">Year — of 4</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <span id="curYearRange" style="font-size:11px;color:var(--text3)"></span>
+        <span id="curYearTotal" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+      <div class="pbar"><div class="pfill" id="progressFill" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span id="progressPct" style="font-size:10px;color:var(--text3)"></span>
+        <span id="progressEarned" style="font-size:10px;color:var(--text3)"></span>
+      </div>
+    </div>
+
+    <!-- Headline metrics -->
+    <div class="g4" style="margin-bottom:16px">
+      <div class="mc orange"><div class="mc-label">Current year total</div><div class="mc-val" id="m-curYear">—</div><div class="mc-sub" id="m-curYearSub">gross comp</div></div>
+      <div class="mc green"><div class="mc-label">4-year total</div><div class="mc-val" id="m-total4yr">—</div><div class="mc-sub">gross compensation</div></div>
+      <div class="mc blue"><div class="mc-label">RSU vested to date</div><div class="mc-val" id="m-vested">—</div><div class="mc-sub" id="m-vestedSub">—</div></div>
+      <div class="mc gray"><div class="mc-label">RSU unvested</div><div class="mc-val" id="m-unvested">—</div><div class="mc-sub" id="m-unvestedSub">—</div></div>
+    </div>
+
+    <!-- Next vest -->
+    <div id="nextVestSection" class="section" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:16px">
+      <div>
+        <div class="sec-title" style="margin-bottom:4px">Next vest</div>
+        <div id="nextVestDate" style="font-family:var(--mono);font-size:15px;color:var(--text)"></div>
+        <div id="nextVestShares" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Estimated value</div>
+        <div id="nextVestValue" style="font-family:var(--mono);font-size:22px;color:var(--green);font-weight:500"></div>
+        <div id="nextVestPrice" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- Annual breakdown table -->
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Annual breakdown</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label class="toggle-wrap">
+            <div class="toggle"><input type="checkbox" id="toggleFuture" onchange="toggleFuturePrice(this.checked)"/><div class="tslider"></div></div>
+            <span style="font-size:12px;color:var(--text2)">Future share price estimates</span>
+          </label>
+          <button onclick="exportCSV()" style="padding:5px 10px;font-size:11px">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="scrollx">
+        <table>
+          <thead><tr>
+            <th>Year</th><th>Period</th><th>Base salary</th><th>Signing bonus</th>
+            <th>RSU shares</th><th>RSU value</th><th style="color:var(--accent)">Total gross</th>
+          </tr></thead>
+          <tbody id="annualTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="disclaimer" id="dashDisclaimer">
+      Estimates only. Gross compensation before taxes and deductions.
+    </div>
+  </div><!-- /dashboard -->
+
+  <!-- INPUTS TAB -->
+  <div id="tab-inputs" class="tab">
+    <div class="section">
+      <div class="sec-title">Compensation details</div>
+      <div class="irow">
+        <div class="igrp"><span class="ilabel">Annual base salary</span><input type="number" id="i-base" oninput="saveAndRender()"/></div>
+        <div class="igrp"><span class="ilabel">Year 1 signing bonus</span><input type="number" id="i-signing1" oninput="saveAndRender()"/></div>
+      </div>
+      <div class="irow">
+        <div class="igrp"><span class="ilabel">Year 2 signing bonus</span><input type="number" id="i-signing2" oninput="saveAndRender()"/></div>
+        <div class="igrp"><span class="ilabel">Total RSUs granted (shares)</span><input type="number" id="i-rsus" oninput="saveAndRender()"/></div>
+      </div>
+      <div class="irow">
+        <div class="igrp"><span class="ilabel">Start date</span><input type="date" id="i-startDate" oninput="saveAndRender()"/></div>
+        <div class="igrp">
+          <span class="ilabel">Currency</span>
+          <select id="i-currency" onchange="onCurrencyChange()">
+            <option value="USD">USD — US Dollar</option>
+            <option value="CAD">CAD — Canadian Dollar</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="AUD">AUD — Australian Dollar</option>
+            <option value="JPY">JPY — Japanese Yen</option>
+            <option value="INR">INR — Indian Rupee</option>
+            <option value="SGD">SGD — Singapore Dollar</option>
+            <option value="CHF">CHF — Swiss Franc</option>
+            <option value="MXN">MXN — Mexican Peso</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">RSU vesting allocation</div>
+        <span id="vestPctBadge" class="badge live"><span class="dot"></span>100% allocated</span>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">
+        Year 3 and Year 4 percentages are each split evenly across two semi-annual vest events.<br>
+        e.g. Year 3 = 40% → 20% at 2.5yr + 20% at 3yr.
+      </p>
+      <div class="g4">
+        <div class="igrp"><span class="ilabel">Year 1 (%)</span><input type="number" id="v-y1" min="0" max="100" oninput="saveAndRender()"/></div>
+        <div class="igrp"><span class="ilabel">Year 2 (%)</span><input type="number" id="v-y2" min="0" max="100" oninput="saveAndRender()"/></div>
+        <div class="igrp"><span class="ilabel">Year 3 (%)</span><input type="number" id="v-y3" min="0" max="100" oninput="saveAndRender()"/></div>
+        <div class="igrp"><span class="ilabel">Year 4 (%)</span><input type="number" id="v-y4" min="0" max="100" oninput="saveAndRender()"/></div>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:10px">Default: 5% / 15% / 40% / 40%</p>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Live market data</div>
+        <span id="finnhubBadge" class="badge info"><span class="dot"></span>no key</span>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">
+        AMZN price via <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue)">Finnhub</a> (free, takes 30 sec to register). FX rates via open.er-api.com (no key needed).
+      </p>
+      <div class="igrp" style="margin-bottom:0">
+        <span class="ilabel">Finnhub API key</span>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="i-finnhubKey" placeholder="Paste your free key from finnhub.io/register" oninput="onFinnhubKeyInput()" style="font-family:var(--mono);font-size:12px"/>
+          <button onclick="refreshMarket()" style="white-space:nowrap;padding:7px 14px">↻ Fetch now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Manual market override</div>
+        <label class="toggle-wrap">
+          <div class="toggle"><input type="checkbox" id="i-useManual" onchange="onManualToggle()"/><div class="tslider"></div></div>
+          <span style="font-size:12px;color:var(--text2)">Enable manual override</span>
+        </label>
+      </div>
+      <div id="manualFields" style="display:none">
+        <div class="irow">
+          <div class="igrp">
+            <span class="ilabel">AMZN share price (USD)</span>
+            <input type="number" id="i-manualPrice" placeholder="e.g. 220.00" oninput="saveAndRender()"/>
+          </div>
+          <div class="igrp" id="manualFXGroup">
+            <span class="ilabel" id="manualFXLabel">FX rate (currency/USD)</span>
+            <input type="number" id="i-manualFX" placeholder="e.g. 1.36" oninput="saveAndRender()"/>
+          </div>
+        </div>
+      </div>
+      <p id="manualOffMsg" style="font-size:12px;color:var(--text3)">Live data active. Enable to override with custom prices.</p>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="danger" onclick="resetAll()">Reset to defaults</button>
+    </div>
+  </div><!-- /inputs -->
+
+  <!-- SCHEDULE TAB -->
+  <div id="tab-schedule" class="tab">
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Full RSU vesting schedule</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="schedTags"></div>
+      </div>
+      <div class="scrollx">
+        <table>
+          <thead><tr>
+            <th>Event</th><th>Vest date</th><th>Status</th><th>Shares</th><th>% of grant</th><th>Value</th><th>Cumulative</th>
+          </tr></thead>
+          <tbody id="schedTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Signing bonus schedule</div>
+      <p id="signingDesc" style="font-size:12px;color:var(--text3);margin-bottom:12px"></p>
+      <div class="g2">
+        <div class="mc blue"><div class="mc-label">Year 1 signing bonus</div><div class="mc-val" id="s-sign1">—</div><div class="mc-sub" id="s-sign1-sub">12 monthly payments</div></div>
+        <div class="mc blue"><div class="mc-label">Year 2 signing bonus</div><div class="mc-val" id="s-sign2">—</div><div class="mc-sub" id="s-sign2-sub">12 monthly payments</div></div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="mc green"><div class="mc-label">Shares vested to date</div><div class="mc-val" id="s-vestedShares">—</div><div class="mc-sub" id="s-vestedVal">—</div></div>
+      <div class="mc gray"><div class="mc-label">Shares remaining</div><div class="mc-val" id="s-unvestedShares">—</div><div class="mc-sub" id="s-unvestedVal">—</div></div>
+    </div>
+  </div><!-- /schedule -->
+</div><!-- /wrap -->
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const DEFAULTS = {
+  baseSalary: 175000, signingBonus1: 20000, signingBonus2: 10000, totalRSUs: 200,
+  startDate: '2025-07-16', currency: 'USD',
+  vestPct: {y1:5, y2:15, y3:40, y4:40},
+  useFuturePrice: false,
+  futurePrice: {y1:220, y2:250, y3:280, y4:310},
+  useManual: false, manualPrice: '', manualFX: '',
+  finnhubKey: '',
+};
+
+let state = Object.assign({}, DEFAULTS);
+let market = { priceUSD: null, rate: 1, source: 'loading' };
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+function saveState() {
+  try { localStorage.setItem('amzn_comp_v4', JSON.stringify(state)); } catch(e){}
+}
+function loadState() {
+  try {
+    const s = localStorage.getItem('amzn_comp_v4');
+    if (s) state = Object.assign({}, DEFAULTS, JSON.parse(s));
+  } catch(e){}
+}
+
+// ─── CURRENCIES ──────────────────────────────────────────────────────────────
+const CURRENCIES = {
+  USD:'$', CAD:'CA$', GBP:'£', EUR:'€', AUD:'A$',
+  JPY:'¥', INR:'₹', SGD:'S$', CHF:'CHF ', MXN:'MX$'
+};
+
+function fmt(v, currency) {
+  if (!isFinite(v)) return '—';
+  const c = currency || state.currency;
+  return new Intl.NumberFormat('en-US', {style:'currency', currency:c, maximumFractionDigits:0}).format(v);
+}
+function fmtCompact(v, currency) {
+  if (!isFinite(v)) return '—';
+  const c = currency || state.currency;
+  const sym = CURRENCIES[c] || '$';
+  const abs = Math.abs(v);
+  if (abs >= 1e6) return `${sym}${(abs/1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${sym}${(abs/1e3).toFixed(1)}K`;
+  return fmt(v, c);
+}
+function fmtN(v, d=2) { return isFinite(v) ? v.toLocaleString('en-US',{maximumFractionDigits:d}) : '—'; }
+function fmtDate(d) { return d.toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric'}); }
+function fmtDateShort(d) { return d.toLocaleDateString('en-CA',{year:'numeric',month:'short'}); }
+
+// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+function addYears(d, n) { const r=new Date(d); r.setFullYear(r.getFullYear()+n); return r; }
+function addMonths(d, n) { const r=new Date(d); r.setMonth(r.getMonth()+n); return r; }
+
+// ─── COMP YEAR LOGIC ─────────────────────────────────────────────────────────
+// Returns 0 (before start), 1-4 (current year), 5 (after year 4)
+function getCompYear(startStr) {
+  const start = new Date(startStr);
+  const today = new Date();
+  if (today < start) return 0;
+  for (let y=1; y<=4; y++) { if (today < addYears(start, y)) return y; }
+  return 5;
+}
+
+function getYearProgress(startStr) {
+  const start = new Date(startStr);
+  const today = new Date();
+  const cy = getCompYear(startStr);
+  if (cy === 0 || cy === 5) return cy === 5 ? 1 : 0;
+  const ys = addYears(start, cy-1);
+  const ye = addYears(start, cy);
+  return Math.min(1, Math.max(0, (today - ys) / (ye - ys)));
+}
+
+// ─── RSU VEST SCHEDULE ────────────────────────────────────────────────────────
+// Y3 and Y4 allocation split in half across two semi-annual events each
+function buildVestSchedule(startStr, totalRSUs, vp) {
+  const start = new Date(startStr);
+  const y3h = vp.y3 / 2, y4h = vp.y4 / 2;
+  const events = [
+    {months:12, pct:vp.y1, label:'Year 1 (1yr)'},
+    {months:24, pct:vp.y2, label:'Year 2 (2yr)'},
+    {months:30, pct:y3h,   label:'Year 3a (2.5yr)'},
+    {months:36, pct:y3h,   label:'Year 3b (3yr)'},
+    {months:42, pct:y4h,   label:'Year 4a (3.5yr)'},
+    {months:48, pct:y4h,   label:'Year 4b (4yr)'},
+  ];
+  return events.map(e => ({
+    date: addMonths(start, e.months),
+    pct: e.pct,
+    shares: totalRSUs * (e.pct/100),
+    label: e.label,
+  }));
+}
+
+// ─── ANNUAL BREAKDOWN ─────────────────────────────────────────────────────────
+function buildAnnual(sp) {
+  const {baseSalary, signingBonus1, signingBonus2, totalRSUs, startDate, vestPct, useFuturePrice, futurePrice} = state;
+  const start = new Date(startDate);
+  const vs = buildVestSchedule(startDate, totalRSUs, vestPct);
+  return [1,2,3,4].map(yr => {
+    const ys = addYears(start, yr-1);
+    const ye = addYears(start, yr);
+    // Signing bonus: Y1 has its own total paid monthly over 12 months,
+    // Y2 has its own separate total paid monthly over 12 months, Y3/Y4 = 0
+    const signing = yr === 1 ? signingBonus1 : yr === 2 ? signingBonus2 : 0;
+    // RSUs vesting within this comp year
+    // Vest on the anniversary date belongs to that year (e.g. 1yr vest → Year 1).
+    // Use (ys, ye] — exclusive start, inclusive end — so boundaries don't double-count.
+    const rsusThisYear = vs.filter(v => v.date > ys && v.date <= ye);
+    const shares = rsusThisYear.reduce((s,v) => s+v.shares, 0);
+    const price = useFuturePrice ? (futurePrice[`y${yr}`] || sp) : sp;
+    const rsuVal = shares * price;
+    return { yr, ys, ye, base:baseSalary, signing, shares, rsuVal, price, vests:rsusThisYear,
+             total: baseSalary + signing + rsuVal };
+  });
+}
+
+// ─── EFFECTIVE SHARE PRICE ────────────────────────────────────────────────────
+function getSharePrice() {
+  if (state.useManual && state.manualPrice) {
+    const p = parseFloat(state.manualPrice);
+    const fx = parseFloat(state.manualFX) || 1;
+    return state.currency === 'USD' ? p : p * fx;
+  }
+  return market.priceUSD ? market.priceUSD * market.rate : 220;
+}
+
+// ─── MARKET FETCH ─────────────────────────────────────────────────────────────
+async function refreshMarket() {
+  document.getElementById('btnRefresh').textContent = '↻ fetching…';
+  document.getElementById('sourceBadge').className = 'badge info';
+  document.getElementById('sourceBadge').innerHTML = '<span class="dot"></span>fetching';
+
+  const key = state.finnhubKey.trim();
+
+  // ── AMZN price via Finnhub, proxied through allorigins.win to bypass CORS ──
+  // A local HTML file has a null origin; stock APIs reject that. The proxy
+  // adds Access-Control-Allow-Origin: * so the browser accepts the response.
+  let priceUSD = null;
+  if (key) {
+    try {
+      const target = `https://finnhub.io/api/v1/quote?symbol=AMZN&token=${key}`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`;
+      const r = await fetch(proxyUrl);
+      if (!r.ok) throw new Error(`proxy HTTP ${r.status}`);
+      const wrapper = await r.json();
+      const d = JSON.parse(wrapper.contents);
+      // Finnhub quote fields: c = current price, pc = previous close
+      priceUSD = d.c || d.pc || null;
+      if (!priceUSD) throw new Error('no price in response');
+    } catch(e) {
+      console.warn('Finnhub fetch failed:', e.message);
+    }
+  }
+
+  // ── FX rate via open.er-api.com (no key, CORS-safe natively) ───────────────
+  let rate = 1;
+  if (state.currency !== 'USD') {
+    try {
+      const fr = await fetch(`https://open.er-api.com/v6/latest/USD`);
+      if (!fr.ok) throw new Error(`HTTP ${fr.status}`);
+      const fd = await fr.json();
+      rate = fd.rates?.[state.currency] || 1;
+    } catch(e) {
+      console.warn('FX fetch failed:', e.message);
+      rate = market.rate || 1;
+    }
+  }
+
+  if (priceUSD) {
+    market = { priceUSD, rate, source: 'live', ts: new Date() };
+    try { localStorage.setItem('amzn_last_fetch', Date.now()); } catch(e) {}
+  } else if (market.priceUSD) {
+    market = { ...market, rate, source: key ? 'failed' : 'nokey', ts: new Date() };
+  } else {
+    market = { priceUSD: null, rate, source: key ? 'failed' : 'nokey', ts: new Date() };
+  }
+
+  updateMarketUI();
+  render();
+  document.getElementById('btnRefresh').textContent = '↻ refresh';
+}
+
+function updateMarketUI() {
+  const sp = market.priceUSD;
+  document.getElementById('priceDisplay').textContent = sp ? `$${fmtN(sp,2)}` : 'N/A';
+  const badge = document.getElementById('sourceBadge');
+  const eff = state.useManual ? 'manual' : market.source;
+  const badgeClass = eff==='live' ? 'live' : eff==='manual' ? 'manual' : 'warn';
+  const badgeLabel = eff==='live' ? 'live' : eff==='manual' ? 'manual' : eff==='nokey' ? 'no key' : 'offline';
+  badge.className = `badge ${badgeClass}`;
+  badge.innerHTML = `<span class="dot"></span>${badgeLabel}`;
+
+  // Finnhub key status badge in Inputs tab
+  const fb = document.getElementById('finnhubBadge');
+  if (fb) {
+    if (!state.finnhubKey.trim()) {
+      fb.className = 'badge warn'; fb.innerHTML = '<span class="dot"></span>no key set';
+    } else if (market.source === 'live') {
+      fb.className = 'badge live'; fb.innerHTML = '<span class="dot"></span>connected';
+    } else if (market.source === 'failed') {
+      fb.className = 'badge manual'; fb.innerHTML = '<span class="dot"></span>key error';
+    } else {
+      fb.className = 'badge info'; fb.innerHTML = '<span class="dot"></span>key saved';
+    }
+  }
+
+  const fxChip = document.getElementById('fxChip');
+  if (state.currency !== 'USD' && market.rate && market.rate !== 1) {
+    fxChip.classList.remove('hidden');
+    fxChip.textContent = `${market.rate.toFixed(4)} ${state.currency}/USD`;
+  } else {
+    fxChip.classList.add('hidden');
+  }
+  if (market.ts) {
+    document.getElementById('lastUpdated').textContent =
+      market.ts.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }
+  const showWarn = (eff === 'failed' || eff === 'nokey') && !state.useManual;
+  document.getElementById('offlineWarn').classList.toggle('hidden', !showWarn);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  const sp = getSharePrice();
+  const annual = buildAnnual(sp);
+  const vs = buildVestSchedule(state.startDate, state.totalRSUs, state.vestPct);
+  const today = new Date();
+  const cy = getCompYear(state.startDate);
+  const prog = getYearProgress(state.startDate);
+  const curY = annual.find(y=>y.yr===cy);
+  const total4 = annual.reduce((s,y)=>s+y.total,0);
+
+  // RSU stats
+  const vested = vs.filter(v=>v.date<=today);
+  const unvested = vs.filter(v=>v.date>today);
+  const vestedShares = vested.reduce((s,v)=>s+v.shares,0);
+  const vestedVal = vestedShares * sp;
+  const unvestedShares = unvested.reduce((s,v)=>s+v.shares,0);
+  const unvestedVal = unvestedShares * sp;
+  const nextVest = unvested[0]||null;
+
+  // Pre-start / post-4yr
+  document.getElementById('preStartBox').classList.toggle('hidden', cy !== 0);
+  document.getElementById('curYearSection').style.display = (cy>=1&&cy<=4) ? '' : 'none';
+
+  // Current year section
+  if (cy>=1&&cy<=4&&curY) {
+    document.getElementById('curYearTag').textContent = `Year ${cy} of 4`;
+    document.getElementById('curYearRange').textContent =
+      `${fmtDate(curY.ys)} → ${fmtDate(curY.ye)}`;
+    document.getElementById('curYearTotal').innerHTML =
+      `Projected year total: <span style="color:var(--accent);font-family:var(--mono)">${fmt(curY.total)}</span>`;
+    document.getElementById('progressFill').style.width = `${prog*100}%`;
+    document.getElementById('progressPct').textContent = `${Math.round(prog*100)}% through Year ${cy}`;
+    document.getElementById('progressEarned').textContent =
+      curY ? `${fmtCompact(curY.total*prog)} earned to date` : '';
+  }
+
+  // Metric cards
+  document.getElementById('m-curYear').textContent = curY ? fmtCompact(curY.total) : '—';
+  document.getElementById('m-curYearSub').textContent = `Year ${cy||1} gross comp`;
+  document.getElementById('m-total4yr').textContent = fmtCompact(total4);
+  document.getElementById('m-vested').textContent = fmtCompact(vestedVal);
+  document.getElementById('m-vestedSub').textContent = `${fmtN(vestedShares,1)} shares @ ${fmt(sp)}`;
+  document.getElementById('m-unvested').textContent = fmtCompact(unvestedVal);
+  document.getElementById('m-unvestedSub').textContent = `${fmtN(unvestedShares,1)} shares remaining`;
+
+  // Next vest
+  const nvSection = document.getElementById('nextVestSection');
+  if (nextVest) {
+    nvSection.style.display = '';
+    document.getElementById('nextVestDate').innerHTML =
+      `${fmtDate(nextVest.date)} <span style="color:var(--text3);font-size:12px">(${nextVest.label})</span>`;
+    document.getElementById('nextVestShares').textContent =
+      `${fmtN(nextVest.shares,2)} shares (${nextVest.pct}% of grant)`;
+    document.getElementById('nextVestValue').textContent = fmt(nextVest.shares*sp);
+    document.getElementById('nextVestPrice').textContent = `@ ${fmt(sp)}/share`;
+  } else {
+    nvSection.style.display = 'none';
+  }
+
+  // Annual table
+  const tbody = document.getElementById('annualTbody');
+  tbody.innerHTML = '';
+  annual.forEach(y => {
+    const isCur = y.yr === cy;
+    const tr = document.createElement('tr');
+    if (isCur) tr.className = 'cur';
+    tr.innerHTML = `
+      <td><span style="font-weight:500">Year ${y.yr}</span>${isCur?'<span style="margin-left:6px;font-size:10px;color:var(--accent);background:var(--accentbg);padding:1px 5px;border-radius:3px">now</span>':''}</td>
+      <td style="font-family:var(--font);font-size:11px;color:var(--text3)">${fmtDateShort(y.ys)} → ${fmtDateShort(y.ye)}</td>
+      <td>${fmt(y.base)}</td>
+      <td>${y.signing>0?fmt(y.signing):'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${y.shares>0?fmtN(y.shares,1):'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="color:var(--blue)">${y.rsuVal>0?fmt(y.rsuVal):'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="color:var(--accent);font-weight:500">${fmt(y.total)}</td>`;
+    tbody.appendChild(tr);
+  });
+  // Total row
+  const tfoot = document.createElement('tr');
+  tfoot.style.background = 'var(--bg3)';
+  tfoot.innerHTML = `
+    <td colspan="2" style="font-family:var(--font);font-weight:500;color:var(--text2)">4-year total</td>
+    <td style="font-weight:500">${fmt(annual.reduce((s,y)=>s+y.base,0))}</td>
+    <td style="font-weight:500">${fmt(state.signingBonus1 + state.signingBonus2)}</td>
+    <td style="font-weight:500">${fmtN(state.totalRSUs,0)}</td>
+    <td style="color:var(--blue);font-weight:500">${fmt(annual.reduce((s,y)=>s+y.rsuVal,0))}</td>
+    <td style="color:var(--accent);font-weight:600;font-size:14px">${fmt(total4)}</td>`;
+  tbody.appendChild(tfoot);
+
+  // Future price inputs (shown below table when enabled)
+  const futureBox = document.getElementById('futureBox');
+  futureBox.style.display = state.useFuturePrice ? '' : 'none';
+  const fpi = document.getElementById('futurePriceInputs');
+  fpi.innerHTML = '';
+  [1,2,3,4].forEach(y => {
+    const div = document.createElement('div');
+    div.className = 'igrp';
+    div.innerHTML = `<span class="ilabel">Year ${y} price (USD)</span>
+      <input type="number" value="${state.futurePrice['y'+y]||''}" placeholder="price"
+        oninput="state.futurePrice['y${y}']=parseFloat(this.value)||0;saveState();render()" style="font-family:var(--mono)"/>`;
+    fpi.appendChild(div);
+  });
+
+  // Disclaimer
+  const eff2 = state.useManual ? 'manually set' : market.source==='live' ? 'live market' : 'estimated';
+  document.getElementById('dashDisclaimer').textContent =
+    `Estimates only. Gross compensation before taxes and deductions. RSU values at ${eff2} price of ${fmt(sp)}/share.`;
+
+  // Vesting schedule tab
+  const schedTbody = document.getElementById('schedTbody');
+  schedTbody.innerHTML = '';
+  let cumShares = 0;
+  let nextFound = false;
+  vs.forEach((v, i) => {
+    const isVested = v.date <= today;
+    const isNext = !isVested && !nextFound;
+    if (isNext) nextFound = true;
+    cumShares += v.shares;
+    const tr = document.createElement('tr');
+    tr.style.opacity = isVested ? '0.6' : '1';
+    const statusBadge = isVested
+      ? '<span class="badge live"><span class="dot"></span>vested</span>'
+      : isNext
+      ? '<span class="badge warn"><span class="dot"></span>next</span>'
+      : '<span style="font-size:11px;color:var(--text3)">pending</span>';
+    tr.innerHTML = `
+      <td>${v.label}</td>
+      <td style="font-family:var(--font)">${fmtDate(v.date)}</td>
+      <td>${statusBadge}</td>
+      <td>${fmtN(v.shares,2)}</td>
+      <td>${v.pct}%</td>
+      <td style="color:${isVested?'var(--text2)':'var(--blue)'}">${fmt(v.shares*sp)}</td>
+      <td style="color:var(--text3);font-size:11px">${fmtCompact(cumShares*sp)}</td>`;
+    schedTbody.appendChild(tr);
+  });
+  document.getElementById('schedTags').innerHTML =
+    `<span class="tag">${fmtN(state.totalRSUs,0)} total shares</span><span class="tag">@ ${fmt(sp)}/share</span>`;
+
+  // Signing schedule tab
+  const monthly1 = state.signingBonus1 / 12;
+  const monthly2 = state.signingBonus2 / 12;
+  const totalSigning = state.signingBonus1 + state.signingBonus2;
+  document.getElementById('signingDesc').textContent =
+    `Year 1 signing bonus of ${fmt(state.signingBonus1)} paid monthly over 12 months (${fmt(monthly1)}/mo). `+
+    `Year 2 signing bonus of ${fmt(state.signingBonus2)} paid monthly over 12 months (${fmt(monthly2)}/mo).`;
+  document.getElementById('s-sign1').textContent = fmt(state.signingBonus1);
+  document.getElementById('s-sign1-sub').textContent = `${fmt(monthly1)}/month × 12`;
+  document.getElementById('s-sign2').textContent = fmt(state.signingBonus2);
+  document.getElementById('s-sign2-sub').textContent = `${fmt(monthly2)}/month × 12`;
+  document.getElementById('s-vestedShares').textContent = fmtN(vestedShares,2);
+  document.getElementById('s-vestedVal').textContent = `${fmt(vestedVal)} at current price`;
+  document.getElementById('s-unvestedShares').textContent = fmtN(unvestedShares,2);
+  document.getElementById('s-unvestedVal').textContent = `${fmt(unvestedVal)} at current price`;
+
+  // Vesting pct badge in inputs tab
+  const sum = [state.vestPct.y1,state.vestPct.y2,state.vestPct.y3,state.vestPct.y4]
+    .reduce((s,v)=>s+Number(v),0);
+  const ok = Math.abs(sum-100)<0.01;
+  const badge2 = document.getElementById('vestPctBadge');
+  badge2.className = `badge ${ok?'live':'manual'}`;
+  badge2.innerHTML = `<span class="dot"></span>${ok?'100% allocated':sum.toFixed(0)+'% — must equal 100%'}`;
+}
+
+// ─── EVENT HANDLERS ───────────────────────────────────────────────────────────
+function syncInputsToState() {
+  state.baseSalary = parseFloat(document.getElementById('i-base').value)||0;
+  state.signingBonus1 = parseFloat(document.getElementById('i-signing1').value)||0;
+  state.signingBonus2 = parseFloat(document.getElementById('i-signing2').value)||0;
+  state.totalRSUs = parseFloat(document.getElementById('i-rsus').value)||0;
+  state.startDate = document.getElementById('i-startDate').value || DEFAULTS.startDate;
+  state.currency = document.getElementById('i-currency').value;
+  state.vestPct.y1 = parseFloat(document.getElementById('v-y1').value)||0;
+  state.vestPct.y2 = parseFloat(document.getElementById('v-y2').value)||0;
+  state.vestPct.y3 = parseFloat(document.getElementById('v-y3').value)||0;
+  state.vestPct.y4 = parseFloat(document.getElementById('v-y4').value)||0;
+  state.manualPrice = document.getElementById('i-manualPrice').value;
+  state.manualFX = document.getElementById('i-manualFX').value;
+  state.finnhubKey = document.getElementById('i-finnhubKey').value.trim();
+}
+
+function syncStateToInputs() {
+  document.getElementById('i-base').value = state.baseSalary;
+  document.getElementById('i-signing1').value = state.signingBonus1;
+  document.getElementById('i-signing2').value = state.signingBonus2;
+  document.getElementById('i-rsus').value = state.totalRSUs;
+  document.getElementById('i-startDate').value = state.startDate;
+  document.getElementById('i-currency').value = state.currency;
+  document.getElementById('v-y1').value = state.vestPct.y1;
+  document.getElementById('v-y2').value = state.vestPct.y2;
+  document.getElementById('v-y3').value = state.vestPct.y3;
+  document.getElementById('v-y4').value = state.vestPct.y4;
+  document.getElementById('i-manualPrice').value = state.manualPrice||'';
+  document.getElementById('i-manualFX').value = state.manualFX||'';
+  document.getElementById('i-finnhubKey').value = state.finnhubKey||'';
+  document.getElementById('i-useManual').checked = state.useManual;
+  document.getElementById('toggleFuture').checked = state.useFuturePrice;
+  document.getElementById('manualFields').style.display = state.useManual ? '' : 'none';
+  document.getElementById('manualOffMsg').style.display = state.useManual ? 'none' : '';
+  const c = state.currency;
+  document.getElementById('manualFXLabel').textContent = `${c}/USD exchange rate`;
+  document.getElementById('i-manualFX').placeholder = c==='CAD'?'e.g. 1.36':c==='GBP'?'e.g. 0.79':'e.g. 1.00';
+  document.getElementById('manualFXGroup').style.display = c==='USD' ? 'none' : '';
+}
+
+function onFinnhubKeyInput() {
+  state.finnhubKey = document.getElementById('i-finnhubKey').value.trim();
+  saveState();
+  updateMarketUI();
+}
+
+function saveAndRender() {
+  syncInputsToState();
+  saveState();
+  syncStateToInputs();
+  render();
+}
+
+function onCurrencyChange() {
+  syncInputsToState();
+  saveState();
+  syncStateToInputs();
+  refreshMarket();
+}
+
+function onManualToggle() {
+  state.useManual = document.getElementById('i-useManual').checked;
+  document.getElementById('manualFields').style.display = state.useManual ? '' : 'none';
+  document.getElementById('manualOffMsg').style.display = state.useManual ? 'none' : '';
+  saveState();
+  updateMarketUI();
+  render();
+}
+
+function toggleFuturePrice(v) {
+  state.useFuturePrice = v;
+  saveState();
+  render();
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function resetAll() {
+  if (!confirm('Reset all inputs to defaults?')) return;
+  state = JSON.parse(JSON.stringify(DEFAULTS));
+  localStorage.removeItem('amzn_comp_v4');
+  syncStateToInputs();
+  render();
+}
+
+function exportCSV() {
+  const sp = getSharePrice();
+  const annual = buildAnnual(sp);
+  const headers = ['Year','Start','End','Base Salary','Signing Bonus','RSU Shares','RSU Value','Total Gross'];
+  const rows = annual.map(y=>[
+    y.yr, fmtDate(y.ys), fmtDate(y.ye),
+    y.base, y.signing.toFixed(2), y.shares.toFixed(2),
+    y.rsuVal.toFixed(2), y.total.toFixed(2)
+  ]);
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='amazon_comp_breakdown.csv'; a.click();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ─── AUTO-REFRESH (every 12 hours, respects last fetch time across reloads) ──
+const REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
+let refreshTimer = null;
+
+function scheduleNextRefresh(delayMs) {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    refreshMarket();
+    scheduleNextRefresh(REFRESH_INTERVAL_MS); // schedule the one after that
+  }, delayMs);
+}
+
+async function refreshMarketAndSchedule() {
+  await refreshMarket();
+  try { localStorage.setItem('amzn_last_fetch', Date.now()); } catch(e) {}
+  scheduleNextRefresh(REFRESH_INTERVAL_MS);
+}
+
+function initMarket() {
+  // Check when we last successfully fetched
+  let lastFetch = 0;
+  try { lastFetch = parseInt(localStorage.getItem('amzn_last_fetch') || '0'); } catch(e) {}
+  const elapsed = Date.now() - lastFetch;
+
+  if (elapsed >= REFRESH_INTERVAL_MS || lastFetch === 0) {
+    // Stale or never fetched — go immediately
+    refreshMarketAndSchedule();
+  } else {
+    // Fetched recently — wait out the remainder, then start the cycle
+    const remaining = REFRESH_INTERVAL_MS - elapsed;
+    scheduleNextRefresh(remaining);
+    // Still need to trigger a UI update with whatever state we have
+    updateMarketUI();
+    render();
+  }
+}
+
+loadState();
+syncStateToInputs();
+render();
+initMarket();
+</script>
+</body>
+</html>
