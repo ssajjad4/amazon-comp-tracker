@@ -258,23 +258,6 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
     </div>
 
     <div class="section">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
-        <div class="sec-title" style="margin:0">Live market data</div>
-        <span id="finnhubBadge" class="badge info"><span class="dot"></span>no key</span>
-      </div>
-      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">
-        AMZN price via <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue)">Finnhub</a> (free, takes 30 sec to register). FX rates via open.er-api.com (no key needed).
-      </p>
-      <div class="igrp" style="margin-bottom:0">
-        <span class="ilabel">Finnhub API key</span>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="i-finnhubKey" placeholder="Paste your free key from finnhub.io/register" oninput="onFinnhubKeyInput()" style="font-family:var(--mono);font-size:12px"/>
-          <button onclick="refreshMarket()" style="white-space:nowrap;padding:7px 14px">↻ Fetch now</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <div class="sec-title" style="margin:0">Manual market override</div>
         <label class="toggle-wrap">
@@ -344,7 +327,6 @@ const DEFAULTS = {
   useFuturePrice: false,
   futurePrice: {y1:220, y2:250, y3:280, y4:310},
   useManual: false, manualPrice: '', manualFX: '',
-  finnhubKey: '',
 };
 
 let state = Object.assign({}, DEFAULTS);
@@ -464,34 +446,26 @@ function getSharePrice() {
 }
 
 // ─── MARKET FETCH ─────────────────────────────────────────────────────────────
+// AMZN price via Vercel serverless function (hides the Finnhub key server-side)
+// FX rates via open.er-api.com (free, no key, natively CORS-safe)
+const PRICE_ENDPOINT = 'https://amazon-comp-tracker.vercel.app/api/price';
+
 async function refreshMarket() {
   document.getElementById('btnRefresh').textContent = '↻ fetching…';
   document.getElementById('sourceBadge').className = 'badge info';
   document.getElementById('sourceBadge').innerHTML = '<span class="dot"></span>fetching';
 
-  const key = state.finnhubKey.trim();
-
-  // ── AMZN price via Finnhub, proxied through allorigins.win to bypass CORS ──
-  // A local HTML file has a null origin; stock APIs reject that. The proxy
-  // adds Access-Control-Allow-Origin: * so the browser accepts the response.
   let priceUSD = null;
-  if (key) {
-    try {
-      const target = `https://finnhub.io/api/v1/quote?symbol=AMZN&token=${key}`;
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`;
-      const r = await fetch(proxyUrl);
-      if (!r.ok) throw new Error(`proxy HTTP ${r.status}`);
-      const wrapper = await r.json();
-      const d = JSON.parse(wrapper.contents);
-      // Finnhub quote fields: c = current price, pc = previous close
-      priceUSD = d.c || d.pc || null;
-      if (!priceUSD) throw new Error('no price in response');
-    } catch(e) {
-      console.warn('Finnhub fetch failed:', e.message);
-    }
+  try {
+    const r = await fetch(`${PRICE_ENDPOINT}?symbol=AMZN`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    priceUSD = d.c || d.pc || null;
+    if (!priceUSD) throw new Error('no price in response');
+  } catch(e) {
+    console.warn('Price fetch failed:', e.message);
   }
 
-  // ── FX rate via open.er-api.com (no key, CORS-safe natively) ───────────────
   let rate = 1;
   if (state.currency !== 'USD') {
     try {
@@ -509,9 +483,9 @@ async function refreshMarket() {
     market = { priceUSD, rate, source: 'live', ts: new Date() };
     try { localStorage.setItem('amzn_last_fetch', Date.now()); } catch(e) {}
   } else if (market.priceUSD) {
-    market = { ...market, rate, source: key ? 'failed' : 'nokey', ts: new Date() };
+    market = { ...market, rate, source: 'failed', ts: new Date() };
   } else {
-    market = { priceUSD: null, rate, source: key ? 'failed' : 'nokey', ts: new Date() };
+    market = { priceUSD: null, rate, source: 'failed', ts: new Date() };
   }
 
   updateMarketUI();
@@ -524,25 +498,8 @@ function updateMarketUI() {
   document.getElementById('priceDisplay').textContent = sp ? `$${fmtN(sp,2)}` : 'N/A';
   const badge = document.getElementById('sourceBadge');
   const eff = state.useManual ? 'manual' : market.source;
-  const badgeClass = eff==='live' ? 'live' : eff==='manual' ? 'manual' : 'warn';
-  const badgeLabel = eff==='live' ? 'live' : eff==='manual' ? 'manual' : eff==='nokey' ? 'no key' : 'offline';
-  badge.className = `badge ${badgeClass}`;
-  badge.innerHTML = `<span class="dot"></span>${badgeLabel}`;
-
-  // Finnhub key status badge in Inputs tab
-  const fb = document.getElementById('finnhubBadge');
-  if (fb) {
-    if (!state.finnhubKey.trim()) {
-      fb.className = 'badge warn'; fb.innerHTML = '<span class="dot"></span>no key set';
-    } else if (market.source === 'live') {
-      fb.className = 'badge live'; fb.innerHTML = '<span class="dot"></span>connected';
-    } else if (market.source === 'failed') {
-      fb.className = 'badge manual'; fb.innerHTML = '<span class="dot"></span>key error';
-    } else {
-      fb.className = 'badge info'; fb.innerHTML = '<span class="dot"></span>key saved';
-    }
-  }
-
+  badge.className = `badge ${eff==='live'?'live':eff==='manual'?'manual':'warn'}`;
+  badge.innerHTML = `<span class="dot"></span>${eff==='live'?'live':eff==='manual'?'manual':'offline'}`;
   const fxChip = document.getElementById('fxChip');
   if (state.currency !== 'USD' && market.rate && market.rate !== 1) {
     fxChip.classList.remove('hidden');
@@ -554,8 +511,7 @@ function updateMarketUI() {
     document.getElementById('lastUpdated').textContent =
       market.ts.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   }
-  const showWarn = (eff === 'failed' || eff === 'nokey') && !state.useManual;
-  document.getElementById('offlineWarn').classList.toggle('hidden', !showWarn);
+  document.getElementById('offlineWarn').classList.toggle('hidden', eff !== 'failed' || state.useManual);
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -735,7 +691,6 @@ function syncInputsToState() {
   state.vestPct.y4 = parseFloat(document.getElementById('v-y4').value)||0;
   state.manualPrice = document.getElementById('i-manualPrice').value;
   state.manualFX = document.getElementById('i-manualFX').value;
-  state.finnhubKey = document.getElementById('i-finnhubKey').value.trim();
 }
 
 function syncStateToInputs() {
@@ -751,7 +706,6 @@ function syncStateToInputs() {
   document.getElementById('v-y4').value = state.vestPct.y4;
   document.getElementById('i-manualPrice').value = state.manualPrice||'';
   document.getElementById('i-manualFX').value = state.manualFX||'';
-  document.getElementById('i-finnhubKey').value = state.finnhubKey||'';
   document.getElementById('i-useManual').checked = state.useManual;
   document.getElementById('toggleFuture').checked = state.useFuturePrice;
   document.getElementById('manualFields').style.display = state.useManual ? '' : 'none';
@@ -760,12 +714,6 @@ function syncStateToInputs() {
   document.getElementById('manualFXLabel').textContent = `${c}/USD exchange rate`;
   document.getElementById('i-manualFX').placeholder = c==='CAD'?'e.g. 1.36':c==='GBP'?'e.g. 0.79':'e.g. 1.00';
   document.getElementById('manualFXGroup').style.display = c==='USD' ? 'none' : '';
-}
-
-function onFinnhubKeyInput() {
-  state.finnhubKey = document.getElementById('i-finnhubKey').value.trim();
-  saveState();
-  updateMarketUI();
 }
 
 function saveAndRender() {
