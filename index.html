@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
+    <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-6Q1Z23R3FE"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -142,11 +142,43 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
       ⚠ Could not fetch live market data. Add your free Finnhub API key in Inputs, or enable manual override.
       <button onclick="switchTab('inputs',document.querySelectorAll('#nav button')[1])" style="margin-left:8px;padding:2px 8px;font-size:11px;border-color:var(--red);color:var(--red);background:transparent">Go to Inputs →</button>
     </div>
-    <div id="futureBox" style="display:none" class="section" style="border-color:rgba(255,149,0,0.3);margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div class="sec-title" style="margin:0">Future share price estimates (by year)</div>
+
+    <!-- Take-home toggle bar -->
+    <div class="section" style="margin-bottom:16px;padding:14px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label class="toggle-wrap">
+            <div class="toggle"><input type="checkbox" id="toggleTakeHome" onchange="onTakeHomeToggle(this.checked)"/><div class="tslider"></div></div>
+            <span style="font-size:13px;color:var(--text);font-weight:500">Show estimated take-home pay</span>
+          </label>
+          <span id="takeHomeBadge" class="badge info hidden"><span class="dot"></span>estimated after-tax</span>
+        </div>
+        <div id="taxRateInfo" style="display:none;font-size:11px;color:var(--text3);font-family:var(--mono)"></div>
       </div>
-      <div class="g4" id="futurePriceInputs"></div>
+    </div>
+    <div id="futureBox" style="display:none;margin-bottom:16px" class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sec-title" style="margin:0">Future share price assumptions</div>
+        <span class="badge warn"><span class="dot"></span>projected values</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <div class="igrp" style="max-width:200px">
+          <span class="ilabel">Annual growth rate (%)</span>
+          <input type="text" inputmode="decimal" id="i-growthRate" value="10"
+            oninput="onGrowthRateInput(this.value)" style="font-family:var(--mono)"/>
+        </div>
+        <p style="font-size:12px;color:var(--text3);padding-bottom:9px">
+          Applied as compound growth from today's price to each vest date.
+        </p>
+      </div>
+      <div id="futurePricePreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <details style="cursor:pointer">
+        <summary style="font-size:12px;color:var(--text3);user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px">▶</span> Override individual year prices (optional)
+        </summary>
+        <div class="g4" id="futurePriceInputs" style="margin-top:12px"></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px">Leave blank to use growth rate calculation.</p>
+      </details>
     </div>
     <div id="preStartBox" class="info-box hidden">📅 Your start date is in the future. Dashboard shows projected compensation.</div>
 
@@ -169,8 +201,8 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 
     <!-- Headline metrics -->
     <div class="g4" style="margin-bottom:16px">
-      <div class="mc orange"><div class="mc-label">Current year total</div><div class="mc-val" id="m-curYear">—</div><div class="mc-sub" id="m-curYearSub">gross comp</div></div>
-      <div class="mc green"><div class="mc-label">4-year total</div><div class="mc-val" id="m-total4yr">—</div><div class="mc-sub">gross compensation</div></div>
+      <div class="mc orange"><div class="mc-label" id="m-curYearLabel">Current year total</div><div class="mc-val" id="m-curYear">—</div><div class="mc-sub" id="m-curYearSub">gross comp</div></div>
+      <div class="mc green"><div class="mc-label" id="m-total4yrLabel">4-year total</div><div class="mc-val" id="m-total4yr">—</div><div class="mc-sub" id="m-total4yrSub">gross compensation</div></div>
       <div class="mc blue"><div class="mc-label">RSU vested to date</div><div class="mc-val" id="m-vested">—</div><div class="mc-sub" id="m-vestedSub">—</div></div>
       <div class="mc gray"><div class="mc-label">RSU unvested</div><div class="mc-val" id="m-unvested">—</div><div class="mc-sub" id="m-unvestedSub">—</div></div>
     </div>
@@ -183,9 +215,10 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
         <div id="nextVestShares" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Estimated value</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Estimated gross value</div>
         <div id="nextVestValue" style="font-family:var(--mono);font-size:22px;color:var(--green);font-weight:500"></div>
         <div id="nextVestPrice" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+        <div id="nextVestAfterTax" style="display:none;margin-top:6px;padding:4px 8px;background:var(--greenbg);border-radius:4px;font-size:11px;color:var(--green);font-family:var(--mono)"></div>
       </div>
     </div>
 
@@ -206,6 +239,8 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
           <thead><tr>
             <th>Year</th><th>Period</th><th>Base salary</th><th>Signing bonus</th>
             <th>RSU shares</th><th>RSU value</th><th style="color:var(--accent)">Total gross</th>
+            <th id="th-tax" style="color:var(--red);display:none">Est. tax</th>
+            <th id="th-net" style="color:var(--green);display:none">Net comp</th>
           </tr></thead>
           <tbody id="annualTbody"></tbody>
         </table>
@@ -213,6 +248,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
     </div>
     <div class="disclaimer" id="dashDisclaimer">
       Estimates only. Gross compensation before taxes and deductions.
+    </div>
+    <div id="takeHomeDisclaimer" class="disclaimer" style="display:none;margin-top:8px;border-left-color:var(--green)">
+      Estimated take-home compensation is for planning purposes only. Tax calculations are approximate and assume this compensation is your only income. RSUs are treated as employment income at vest and do not include future capital gains or losses. Not tax advice.
     </div>
   </div><!-- /dashboard -->
 
@@ -246,7 +284,18 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
           </select>
         </div>
       </div>
-    </div>
+      <div class="irow" style="margin-bottom:0">
+        <div class="igrp">
+          <span class="ilabel">Work location <span style="color:var(--text3);font-weight:400">(used for take-home estimates)</span></span>
+          <select id="i-location" onchange="saveAndRender()">
+            <option value="toronto_on">Toronto, Canada</option>
+            <option value="boston_ma">Boston, MA</option>
+            <option value="arlington_va">Arlington, VA</option>
+            <option value="seattle_wa">Seattle, WA</option>
+          </select>
+        </div>
+      </div>
+    </div><!-- /compensation details section -->
 
     <div class="section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -278,11 +327,11 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
         <div class="irow">
           <div class="igrp">
             <span class="ilabel">AMZN share price (USD)</span>
-            <input type="number" id="i-manualPrice" placeholder="e.g. 220.00" oninput="saveAndRender()"/>
+            <input type="text" inputmode="decimal" id="i-manualPrice" placeholder="e.g. 220.00" oninput="saveAndRender()" style="font-family:var(--mono)"/>
           </div>
           <div class="igrp" id="manualFXGroup">
             <span class="ilabel" id="manualFXLabel">FX rate (currency/USD)</span>
-            <input type="number" id="i-manualFX" placeholder="e.g. 1.36" oninput="saveAndRender()"/>
+            <input type="text" inputmode="decimal" id="i-manualFX" placeholder="e.g. 1.36" oninput="saveAndRender()" style="font-family:var(--mono)"/>
           </div>
         </div>
       </div>
@@ -332,9 +381,12 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 const DEFAULTS = {
   baseSalary: 175000, signingBonus1: 20000, signingBonus2: 10000, totalRSUs: 200,
   startDate: '2025-07-16', currency: 'USD',
+  location: 'toronto_on',
+  showTakeHome: false,
   vestPct: {y1:5, y2:15, y3:40, y4:40},
   useFuturePrice: false,
-  futurePrice: {y1:220, y2:250, y3:280, y4:310},
+  growthRate: 10,
+  futurePrice: {},
   useManual: false, manualPrice: '', manualFX: '',
 };
 
@@ -343,11 +395,11 @@ let market = { priceUSD: null, rate: 1, source: 'loading' };
 
 // ─── STORAGE ─────────────────────────────────────────────────────────────────
 function saveState() {
-  try { localStorage.setItem('amzn_comp_v4', JSON.stringify(state)); } catch(e){}
+  try { localStorage.setItem('amzn_comp_v6', JSON.stringify(state)); } catch(e){}
 }
 function loadState() {
   try {
-    const s = localStorage.getItem('amzn_comp_v4');
+    const s = localStorage.getItem('amzn_comp_v6');
     if (s) state = Object.assign({}, DEFAULTS, JSON.parse(s));
   } catch(e){}
 }
@@ -421,9 +473,24 @@ function buildVestSchedule(startStr, totalRSUs, vp) {
   }));
 }
 
+// ─── FUTURE PRICE CALC ───────────────────────────────────────────────────────
+// Projects share price from today using compound annual growth.
+// If the user has set a manual override for that year, use that instead.
+function computeFuturePrice(currentPriceUSD, vestDate, yr) {
+  // Per-year manual override takes priority
+  const override = state.futurePrice[`y${yr}`];
+  if (override && override > 0) return override * (market.rate || 1);
+
+  // Years from today to the vest date (can be fractional)
+  const today = new Date();
+  const yearsAhead = Math.max(0, (vestDate - today) / (365.25 * 24 * 60 * 60 * 1000));
+  const rate = (state.growthRate || 0) / 100;
+  return currentPriceUSD * Math.pow(1 + rate, yearsAhead);
+}
+
 // ─── ANNUAL BREAKDOWN ─────────────────────────────────────────────────────────
 function buildAnnual(sp) {
-  const {baseSalary, signingBonus1, signingBonus2, totalRSUs, startDate, vestPct, useFuturePrice, futurePrice} = state;
+  const {baseSalary, signingBonus1, signingBonus2, totalRSUs, startDate, vestPct, useFuturePrice} = state;
   const start = new Date(startDate);
   const vs = buildVestSchedule(startDate, totalRSUs, vestPct);
   return [1,2,3,4].map(yr => {
@@ -432,12 +499,28 @@ function buildAnnual(sp) {
     // Signing bonus: Y1 has its own total paid monthly over 12 months,
     // Y2 has its own separate total paid monthly over 12 months, Y3/Y4 = 0
     const signing = yr === 1 ? signingBonus1 : yr === 2 ? signingBonus2 : 0;
-    // RSUs vesting within this comp year
     // Vest on the anniversary date belongs to that year (e.g. 1yr vest → Year 1).
     // Use (ys, ye] — exclusive start, inclusive end — so boundaries don't double-count.
     const rsusThisYear = vs.filter(v => v.date > ys && v.date <= ye);
     const shares = rsusThisYear.reduce((s,v) => s+v.shares, 0);
-    const price = useFuturePrice ? (futurePrice[`y${yr}`] || sp) : sp;
+
+    // For future price mode: use projected price at the midpoint of vesting events,
+    // or the anniversary date itself for single-vest years.
+    let price;
+    if (useFuturePrice) {
+      if (rsusThisYear.length === 0) {
+        price = computeFuturePrice(sp / (market.rate||1), ye, yr);
+      } else {
+        // Weighted average projected price across vest events in this year
+        const totalShares = rsusThisYear.reduce((s,v) => s+v.shares, 0);
+        price = totalShares > 0
+          ? rsusThisYear.reduce((s,v) => s + computeFuturePrice(sp / (market.rate||1), v.date, yr) * v.shares, 0) / totalShares
+          : computeFuturePrice(sp / (market.rate||1), ye, yr);
+      }
+    } else {
+      price = sp; // current price in user's currency
+    }
+
     const rsuVal = shares * price;
     return { yr, ys, ye, base:baseSalary, signing, shares, rsuVal, price, vests:rsusThisYear,
              total: baseSalary + signing + rsuVal };
@@ -452,6 +535,197 @@ function getSharePrice() {
     return state.currency === 'USD' ? p : p * fx;
   }
   return market.priceUSD ? market.priceUSD * market.rate : 220;
+}
+
+// ─── TAX ENGINE ───────────────────────────────────────────────────────────────
+// Isolated tax calculation module. All inputs are in the LOCAL currency (already
+// FX-converted). Returns breakdown in the same currency.
+//
+// Assumptions:
+//   • Only income source is employment (base + signing + RSU vest as employment income)
+//   • Single, no dependents, no RRSP/401k/HSA/charitable deductions
+//   • RSUs taxed as employment income at vest (not capital gains)
+//   • Standard/default deductions only
+//   • Approximate 2024/2025 rates — useful for planning, not filing
+
+const TAX_LOCATIONS = {
+  toronto_on: { label: 'Toronto, Canada', currency: 'CAD' },
+  boston_ma:  { label: 'Boston, MA',      currency: 'USD' },
+  arlington_va:{ label: 'Arlington, VA',  currency: 'USD' },
+  seattle_wa: { label: 'Seattle, WA',     currency: 'USD' },
+};
+
+function estimateTaxes(grossIncomeLocal, locationKey, fxRate) {
+  // grossIncomeLocal is already in the user's display currency.
+  // For US locations we work in USD; for Canada in CAD.
+  // fxRate = local / USD (so USD amounts * fxRate = local currency amounts)
+  const loc = locationKey || 'toronto_on';
+  const fx = fxRate || 1;
+
+  if (loc === 'toronto_on') {
+    return _taxCanada_ON(grossIncomeLocal);
+  } else if (loc === 'boston_ma') {
+    return _taxUS_MA(grossIncomeLocal, fx);
+  } else if (loc === 'arlington_va') {
+    return _taxUS_VA(grossIncomeLocal, fx);
+  } else if (loc === 'seattle_wa') {
+    return _taxUS_WA(grossIncomeLocal, fx);
+  }
+  return _taxUS_WA(grossIncomeLocal, fx); // fallback
+}
+
+// ── Canada / Ontario ──────────────────────────────────────────────────────────
+// 2024 federal + Ontario provincial rates (CAD)
+// Basic personal amount: federal $15,705 / Ontario $11,865
+// CPP: 5.95% on earnings $3,500–$68,500 (max ~$3,867)
+// EI:  1.66% on insurable earnings up to $63,200 (max ~$1,049)
+function _taxCanada_ON(incomeCAD) {
+  // ── Federal tax (2024) ───────────────────────────────────────────────────
+  const fedBPA = 15705;
+  const fedTaxable = Math.max(0, incomeCAD - fedBPA);
+  const fedBrackets = [
+    {limit:57375,  rate:0.15},
+    {limit:114750, rate:0.205},
+    {limit:158519, rate:0.26},
+    {limit:220000, rate:0.29},
+    {limit:Infinity, rate:0.33},
+  ];
+  const fedTax = _applyBrackets(fedTaxable, fedBrackets);
+
+  // Federal basic personal amount credit already factored in via the deduction above.
+  // Canada Employment Amount credit: 15% × min(income, $1,368)
+  const empCredit = 0.15 * Math.min(incomeCAD, 1368);
+  const federalTax = Math.max(0, fedTax - empCredit);
+
+  // ── Ontario provincial tax (2024) ────────────────────────────────────────
+  const onBPA = 11865;
+  const onTaxable = Math.max(0, incomeCAD - onBPA);
+  const onBrackets = [
+    {limit:51446,  rate:0.0505},
+    {limit:102894, rate:0.0915},
+    {limit:150000, rate:0.1116},
+    {limit:220000, rate:0.1216},
+    {limit:Infinity, rate:0.1316},
+  ];
+  let onTax = _applyBrackets(onTaxable, onBrackets);
+  // Ontario surtax (2024): 20% on ON tax > $5,315; add 36% on ON tax > $6,802
+  if (onTax > 6802) onTax += 0.20*(onTax - 5315) + 0.36*(onTax - 6802);
+  else if (onTax > 5315) onTax += 0.20*(onTax - 5315);
+  // Ontario basic personal credit: 5.05% × BPA
+  const onBPACredit = 0.0505 * onBPA;
+  const provincialTax = Math.max(0, onTax - onBPACredit);
+
+  // ── CPP + EI (payroll) ───────────────────────────────────────────────────
+  const cppRate = 0.0595, cppMax = 68500, cppExempt = 3500;
+  const cpp = Math.min((incomeCAD - cppExempt) * cppRate, (cppMax - cppExempt) * cppRate);
+  const eiRate = 0.0166, eiMaxEarnings = 63200;
+  const ei = Math.min(incomeCAD * eiRate, eiMaxEarnings * eiRate);
+  const payrollTax = Math.max(0, cpp) + ei;
+
+  const totalTax = federalTax + provincialTax + payrollTax;
+  const netIncome = incomeCAD - totalTax;
+  return {
+    federalTax, provincialTax, payrollTax, totalTax,
+    effectiveTaxRate: incomeCAD > 0 ? totalTax / incomeCAD : 0,
+    netIncome,
+    breakdown: { 'Federal (CA)': federalTax, 'Ontario Provincial': provincialTax, 'CPP + EI': payrollTax },
+  };
+}
+
+// ── United States helpers ─────────────────────────────────────────────────────
+// Federal: 2024 single filer brackets, standard deduction $14,600
+// FICA: Social Security 6.2% up to $168,600 wage base; Medicare 1.45% + 0.9% over $200k
+function _usFederalTax(incomeUSD) {
+  const stdDeduction = 14600;
+  const taxable = Math.max(0, incomeUSD - stdDeduction);
+  const brackets = [
+    {limit:11600,  rate:0.10},
+    {limit:47150,  rate:0.12},
+    {limit:100525, rate:0.22},
+    {limit:191950, rate:0.24},
+    {limit:243725, rate:0.32},
+    {limit:609350, rate:0.35},
+    {limit:Infinity, rate:0.37},
+  ];
+  return _applyBrackets(taxable, brackets);
+}
+
+function _usFICA(incomeUSD) {
+  const ssCap = 168600;
+  const ss = Math.min(incomeUSD, ssCap) * 0.062;
+  const medicare = incomeUSD * 0.0145 + Math.max(0, incomeUSD - 200000) * 0.009;
+  return { ss, medicare, total: ss + medicare };
+}
+
+// ── Boston, MA ────────────────────────────────────────────────────────────────
+// MA flat income tax: 5% (+ 4% surtax on income > $1M)
+function _taxUS_MA(incomeLocal, fx) {
+  const incomeUSD = incomeLocal / fx;
+  const federalTax = _usFederalTax(incomeUSD) * fx;
+  const maTax = (incomeUSD * 0.05 + Math.max(0, incomeUSD - 1000000) * 0.04) * fx;
+  const fica = _usFICA(incomeUSD);
+  const payrollTax = fica.total * fx;
+  const totalTax = federalTax + maTax + payrollTax;
+  return {
+    federalTax, provincialTax: maTax, payrollTax, totalTax,
+    effectiveTaxRate: incomeLocal > 0 ? totalTax / incomeLocal : 0,
+    netIncome: incomeLocal - totalTax,
+    breakdown: { 'Federal (US)': federalTax, 'Massachusetts': maTax, 'FICA': payrollTax },
+  };
+}
+
+// ── Arlington, VA ─────────────────────────────────────────────────────────────
+// VA brackets: 5.75% flat above $17,000; standard deduction $8,000
+function _taxUS_VA(incomeLocal, fx) {
+  const incomeUSD = incomeLocal / fx;
+  const federalTax = _usFederalTax(incomeUSD) * fx;
+  const vaStdDed = 8000;
+  const vaTaxable = Math.max(0, incomeUSD - vaStdDed);
+  const vaBrackets = [
+    {limit:3000,     rate:0.02},
+    {limit:5000,     rate:0.03},
+    {limit:17000,    rate:0.05},
+    {limit:Infinity, rate:0.0575},
+  ];
+  const vaTax = _applyBrackets(vaTaxable, vaBrackets) * fx;
+  const fica = _usFICA(incomeUSD);
+  const payrollTax = fica.total * fx;
+  const totalTax = federalTax + vaTax + payrollTax;
+  return {
+    federalTax, provincialTax: vaTax, payrollTax, totalTax,
+    effectiveTaxRate: incomeLocal > 0 ? totalTax / incomeLocal : 0,
+    netIncome: incomeLocal - totalTax,
+    breakdown: { 'Federal (US)': federalTax, 'Virginia': vaTax, 'FICA': payrollTax },
+  };
+}
+
+// ── Seattle, WA ───────────────────────────────────────────────────────────────
+// WA has no state income tax; federal + FICA only
+function _taxUS_WA(incomeLocal, fx) {
+  const incomeUSD = incomeLocal / fx;
+  const federalTax = _usFederalTax(incomeUSD) * fx;
+  const fica = _usFICA(incomeUSD);
+  const payrollTax = fica.total * fx;
+  const totalTax = federalTax + payrollTax;
+  return {
+    federalTax, provincialTax: 0, payrollTax, totalTax,
+    effectiveTaxRate: incomeLocal > 0 ? totalTax / incomeLocal : 0,
+    netIncome: incomeLocal - totalTax,
+    breakdown: { 'Federal (US)': federalTax, 'Washington (no state tax)': 0, 'FICA': payrollTax },
+  };
+}
+
+// ── Progressive bracket helper ────────────────────────────────────────────────
+function _applyBrackets(income, brackets) {
+  let tax = 0, prev = 0;
+  for (const b of brackets) {
+    if (income <= 0) break;
+    const slice = Math.min(income, b.limit - prev);
+    tax += slice * b.rate;
+    income -= slice;
+    prev = b.limit;
+  }
+  return tax;
 }
 
 // ─── MARKET FETCH ─────────────────────────────────────────────────────────────
@@ -543,6 +817,34 @@ function render() {
   const unvestedVal = unvestedShares * sp;
   const nextVest = unvested[0]||null;
 
+  // Take-home mode setup
+  const takeHome = state.showTakeHome || false;
+  const fxRate = market.rate || 1;
+  document.getElementById('takeHomeBadge').classList.toggle('hidden', !takeHome);
+  document.getElementById('takeHomeDisclaimer').style.display = takeHome ? '' : 'none';
+  document.getElementById('th-tax').style.display = takeHome ? '' : 'none';
+  document.getElementById('th-net').style.display = takeHome ? '' : 'none';
+
+  // Compute per-year taxes when in take-home mode
+  // taxableIncome = base + signing + rsuValue (RSUs as employment income at vest)
+  const annualWithTax = annual.map(y => {
+    const taxes = estimateTaxes(y.total, state.location, fxRate);
+    return { ...y, taxes };
+  });
+  const total4net = annualWithTax.reduce((s,y) => s + y.taxes.netIncome, 0);
+
+  // Effective tax rate for current year (shown in tax info bar)
+  const curYwithTax = annualWithTax.find(y=>y.yr===cy);
+  if (takeHome && curYwithTax) {
+    const locLabel = TAX_LOCATIONS[state.location]?.label || state.location;
+    const rate = (curYwithTax.taxes.effectiveTaxRate * 100).toFixed(1);
+    document.getElementById('taxRateInfo').style.display = '';
+    document.getElementById('taxRateInfo').textContent =
+      `${locLabel} · Year ${cy||1} effective rate: ${rate}%`;
+  } else {
+    document.getElementById('taxRateInfo').style.display = 'none';
+  }
+
   // Pre-start / post-4yr
   document.getElementById('preStartBox').classList.toggle('hidden', cy !== 0);
   document.getElementById('curYearSection').style.display = (cy>=1&&cy<=4) ? '' : 'none';
@@ -552,18 +854,25 @@ function render() {
     document.getElementById('curYearTag').textContent = `Year ${cy} of 4`;
     document.getElementById('curYearRange').textContent =
       `${fmtDate(curY.ys)} → ${fmtDate(curY.ye)}`;
+    const displayTotal = takeHome ? curYwithTax?.taxes.netIncome : curY.total;
+    const totalLabel = takeHome ? 'Estimated take-home' : 'Projected year total';
     document.getElementById('curYearTotal').innerHTML =
-      `Projected year total: <span style="color:var(--accent);font-family:var(--mono)">${fmt(curY.total)}</span>`;
+      `${totalLabel}: <span style="color:var(--accent);font-family:var(--mono)">${fmt(displayTotal)}</span>`;
     document.getElementById('progressFill').style.width = `${prog*100}%`;
     document.getElementById('progressPct').textContent = `${Math.round(prog*100)}% through Year ${cy}`;
     document.getElementById('progressEarned').textContent =
-      curY ? `${fmtCompact(curY.total*prog)} earned to date` : '';
+      curY ? `${fmtCompact((takeHome ? curYwithTax?.taxes.netIncome : curY.total)*prog)} earned to date` : '';
   }
 
   // Metric cards
-  document.getElementById('m-curYear').textContent = curY ? fmtCompact(curY.total) : '—';
-  document.getElementById('m-curYearSub').textContent = `Year ${cy||1} gross comp`;
-  document.getElementById('m-total4yr').textContent = fmtCompact(total4);
+  const curDisplay = takeHome ? (curYwithTax?.taxes.netIncome ?? 0) : (curY?.total ?? 0);
+  const totalDisplay = takeHome ? total4net : total4;
+  document.getElementById('m-curYearLabel').textContent = takeHome ? 'Current year take-home' : 'Current year total';
+  document.getElementById('m-total4yrLabel').textContent = takeHome ? '4-year take-home' : '4-year total';
+  document.getElementById('m-curYear').textContent = curY ? fmtCompact(curDisplay) : '—';
+  document.getElementById('m-curYearSub').textContent = takeHome ? `Year ${cy||1} net comp` : `Year ${cy||1} gross comp`;
+  document.getElementById('m-total4yr').textContent = fmtCompact(totalDisplay);
+  document.getElementById('m-total4yrSub').textContent = takeHome ? 'net compensation' : 'gross compensation';
   document.getElementById('m-vested').textContent = fmtCompact(vestedVal);
   document.getElementById('m-vestedSub').textContent = `${fmtN(vestedShares,1)} shares @ ${fmt(sp)}`;
   document.getElementById('m-unvested').textContent = fmtCompact(unvestedVal);
@@ -577,8 +886,25 @@ function render() {
       `${fmtDate(nextVest.date)} <span style="color:var(--text3);font-size:12px">(${nextVest.label})</span>`;
     document.getElementById('nextVestShares').textContent =
       `${fmtN(nextVest.shares,2)} shares (${nextVest.pct}% of grant)`;
-    document.getElementById('nextVestValue').textContent = fmt(nextVest.shares*sp);
+    const grossVestVal = nextVest.shares * sp;
+    document.getElementById('nextVestValue').textContent = fmt(grossVestVal);
     document.getElementById('nextVestPrice').textContent = `@ ${fmt(sp)}/share`;
+    // After-tax next vest: estimate tax on a year's income that includes this vest
+    const nvAfterTaxEl = document.getElementById('nextVestAfterTax');
+    if (takeHome) {
+      // Approximate: find the comp year this vest falls in, apply that year's net rate
+      const nvYear = annualWithTax.find(y => nextVest.date > y.ys && nextVest.date <= y.ye);
+      if (nvYear && nvYear.taxes.effectiveTaxRate > 0) {
+        const netRate = 1 - nvYear.taxes.effectiveTaxRate;
+        const afterTaxVest = grossVestVal * netRate;
+        nvAfterTaxEl.style.display = '';
+        nvAfterTaxEl.textContent = `≈ ${fmt(afterTaxVest)} after tax`;
+      } else {
+        nvAfterTaxEl.style.display = 'none';
+      }
+    } else {
+      nvAfterTaxEl.style.display = 'none';
+    }
   } else {
     nvSection.style.display = 'none';
   }
@@ -586,10 +912,16 @@ function render() {
   // Annual table
   const tbody = document.getElementById('annualTbody');
   tbody.innerHTML = '';
-  annual.forEach(y => {
+  annualWithTax.forEach(y => {
     const isCur = y.yr === cy;
     const tr = document.createElement('tr');
     if (isCur) tr.className = 'cur';
+    const taxCell = takeHome
+      ? `<td style="color:var(--red)">${fmt(y.taxes.totalTax)}</td>`
+      : '';
+    const netCell = takeHome
+      ? `<td style="color:var(--green);font-weight:500">${fmt(y.taxes.netIncome)}</td>`
+      : '';
     tr.innerHTML = `
       <td><span style="font-weight:500">Year ${y.yr}</span>${isCur?'<span style="margin-left:6px;font-size:10px;color:var(--accent);background:var(--accentbg);padding:1px 5px;border-radius:3px">now</span>':''}</td>
       <td style="font-family:var(--font);font-size:11px;color:var(--text3)">${fmtDateShort(y.ys)} → ${fmtDateShort(y.ye)}</td>
@@ -597,34 +929,63 @@ function render() {
       <td>${y.signing>0?fmt(y.signing):'<span style="color:var(--text3)">—</span>'}</td>
       <td>${y.shares>0?fmtN(y.shares,1):'<span style="color:var(--text3)">—</span>'}</td>
       <td style="color:var(--blue)">${y.rsuVal>0?fmt(y.rsuVal):'<span style="color:var(--text3)">—</span>'}</td>
-      <td style="color:var(--accent);font-weight:500">${fmt(y.total)}</td>`;
+      <td style="color:var(--accent);font-weight:500">${fmt(y.total)}</td>
+      ${taxCell}${netCell}`;
     tbody.appendChild(tr);
   });
   // Total row
   const tfoot = document.createElement('tr');
   tfoot.style.background = 'var(--bg3)';
+  const totalTaxAll = annualWithTax.reduce((s,y) => s + y.taxes.totalTax, 0);
+  const taxTotalCell = takeHome ? `<td style="color:var(--red);font-weight:500">${fmt(totalTaxAll)}</td>` : '';
+  const netTotalCell = takeHome ? `<td style="color:var(--green);font-weight:600;font-size:14px">${fmt(total4net)}</td>` : '';
   tfoot.innerHTML = `
     <td colspan="2" style="font-family:var(--font);font-weight:500;color:var(--text2)">4-year total</td>
     <td style="font-weight:500">${fmt(annual.reduce((s,y)=>s+y.base,0))}</td>
     <td style="font-weight:500">${fmt(state.signingBonus1 + state.signingBonus2)}</td>
     <td style="font-weight:500">${fmtN(state.totalRSUs,0)}</td>
     <td style="color:var(--blue);font-weight:500">${fmt(annual.reduce((s,y)=>s+y.rsuVal,0))}</td>
-    <td style="color:var(--accent);font-weight:600;font-size:14px">${fmt(total4)}</td>`;
+    <td style="color:var(--accent);font-weight:600;font-size:14px">${fmt(total4)}</td>
+    ${taxTotalCell}${netTotalCell}`;
   tbody.appendChild(tfoot);
 
-  // Future price inputs (shown below table when enabled)
+  // Future price box (shown when toggle is on)
   const futureBox = document.getElementById('futureBox');
   futureBox.style.display = state.useFuturePrice ? '' : 'none';
-  const fpi = document.getElementById('futurePriceInputs');
-  fpi.innerHTML = '';
-  [1,2,3,4].forEach(y => {
-    const div = document.createElement('div');
-    div.className = 'igrp';
-    div.innerHTML = `<span class="ilabel">Year ${y} price (USD)</span>
-      <input type="number" value="${state.futurePrice['y'+y]||''}" placeholder="price"
-        oninput="state.futurePrice['y${y}']=parseFloat(this.value)||0;saveState();render()" style="font-family:var(--mono)"/>`;
-    fpi.appendChild(div);
-  });
+  if (state.useFuturePrice) {
+    // Sync growth rate input without clobbering cursor
+    const grInput = document.getElementById('i-growthRate');
+    if (document.activeElement !== grInput) grInput.value = state.growthRate;
+
+    // Preview chips: show projected price for each vest event
+    const vs2 = buildVestSchedule(state.startDate, state.totalRSUs, state.vestPct);
+    const basePriceUSD = market.priceUSD || (sp / (market.rate||1));
+    const preview = document.getElementById('futurePricePreview');
+    preview.innerHTML = '';
+    vs2.forEach(v => {
+      const proj = computeFuturePrice(basePriceUSD, v.date, null);
+      const chip = document.createElement('div');
+      chip.className = 'tag';
+      chip.style.cssText = 'display:flex;flex-direction:column;gap:2px;padding:6px 10px';
+      chip.innerHTML = `<span style="font-size:10px;color:var(--text3)">${v.label}</span>
+        <span style="color:var(--accent)">${fmt(proj)}</span>`;
+      preview.appendChild(chip);
+    });
+
+    // Per-year override inputs
+    const fpi = document.getElementById('futurePriceInputs');
+    fpi.innerHTML = '';
+    [1,2,3,4].forEach(y => {
+      const div = document.createElement('div');
+      div.className = 'igrp';
+      const val = state.futurePrice[`y${y}`] || '';
+      div.innerHTML = `<span class="ilabel">Year ${y} override (USD)</span>
+        <input type="text" inputmode="decimal" value="${val}" placeholder="auto"
+          oninput="onFuturePriceOverride(${y}, this.value)"
+          style="font-family:var(--mono);font-size:12px"/>`;
+      fpi.appendChild(div);
+    });
+  }
 
   // Disclaimer
   const eff2 = state.useManual ? 'manually set' : market.source==='live' ? 'live market' : 'estimated';
@@ -694,6 +1055,7 @@ function syncInputsToState() {
   state.totalRSUs = parseFloat(document.getElementById('i-rsus').value)||0;
   state.startDate = document.getElementById('i-startDate').value || DEFAULTS.startDate;
   state.currency = document.getElementById('i-currency').value;
+  state.location = document.getElementById('i-location').value;
   state.vestPct.y1 = parseFloat(document.getElementById('v-y1').value)||0;
   state.vestPct.y2 = parseFloat(document.getElementById('v-y2').value)||0;
   state.vestPct.y3 = parseFloat(document.getElementById('v-y3').value)||0;
@@ -709,12 +1071,18 @@ function syncStateToInputs() {
   document.getElementById('i-rsus').value = state.totalRSUs;
   document.getElementById('i-startDate').value = state.startDate;
   document.getElementById('i-currency').value = state.currency;
+  document.getElementById('i-location').value = state.location || 'toronto_on';
+  const thEl = document.getElementById('toggleTakeHome');
+  if (thEl) thEl.checked = state.showTakeHome || false;
   document.getElementById('v-y1').value = state.vestPct.y1;
   document.getElementById('v-y2').value = state.vestPct.y2;
   document.getElementById('v-y3').value = state.vestPct.y3;
   document.getElementById('v-y4').value = state.vestPct.y4;
   document.getElementById('i-manualPrice').value = state.manualPrice||'';
   document.getElementById('i-manualFX').value = state.manualFX||'';
+  // growthRate input is only in the dashboard futureBox; sync it if present
+  const grEl = document.getElementById('i-growthRate');
+  if (grEl && document.activeElement !== grEl) grEl.value = state.growthRate ?? 10;
   document.getElementById('i-useManual').checked = state.useManual;
   document.getElementById('toggleFuture').checked = state.useFuturePrice;
   document.getElementById('manualFields').style.display = state.useManual ? '' : 'none';
@@ -723,6 +1091,25 @@ function syncStateToInputs() {
   document.getElementById('manualFXLabel').textContent = `${c}/USD exchange rate`;
   document.getElementById('i-manualFX').placeholder = c==='CAD'?'e.g. 1.36':c==='GBP'?'e.g. 0.79':'e.g. 1.00';
   document.getElementById('manualFXGroup').style.display = c==='USD' ? 'none' : '';
+}
+
+function onTakeHomeToggle(v) {
+  state.showTakeHome = v;
+  saveState();
+  render();
+}
+
+function onGrowthRateInput(val) {
+  // Allow partial input (e.g. "1." while typing "1.5") without clobbering
+  const n = parseFloat(val);
+  if (!isNaN(n)) { state.growthRate = n; saveState(); render(); }
+}
+
+function onFuturePriceOverride(yr, val) {
+  const n = parseFloat(val);
+  if (!isNaN(n) && n > 0) state.futurePrice[`y${yr}`] = n;
+  else delete state.futurePrice[`y${yr}`];
+  saveState(); render();
 }
 
 function saveAndRender() {
@@ -764,7 +1151,7 @@ function switchTab(name, btn) {
 function resetAll() {
   if (!confirm('Reset all inputs to defaults?')) return;
   state = JSON.parse(JSON.stringify(DEFAULTS));
-  localStorage.removeItem('amzn_comp_v4');
+  localStorage.removeItem('amzn_comp_v6');
   syncStateToInputs();
   render();
 }
@@ -772,12 +1159,23 @@ function resetAll() {
 function exportCSV() {
   const sp = getSharePrice();
   const annual = buildAnnual(sp);
+  const fxRate = market.rate || 1;
+  const takeHome = state.showTakeHome || false;
   const headers = ['Year','Start','End','Base Salary','Signing Bonus','RSU Shares','RSU Value','Total Gross'];
-  const rows = annual.map(y=>[
-    y.yr, fmtDate(y.ys), fmtDate(y.ye),
-    y.base, y.signing.toFixed(2), y.shares.toFixed(2),
-    y.rsuVal.toFixed(2), y.total.toFixed(2)
-  ]);
+  if (takeHome) headers.push('Estimated Tax', 'Net Compensation', 'Effective Tax Rate');
+  const rows = annual.map(y => {
+    const row = [
+      y.yr, fmtDate(y.ys), fmtDate(y.ye),
+      y.base, y.signing.toFixed(2), y.shares.toFixed(2),
+      y.rsuVal.toFixed(2), y.total.toFixed(2)
+    ];
+    if (takeHome) {
+      const taxes = estimateTaxes(y.total, state.location, fxRate);
+      row.push(taxes.totalTax.toFixed(2), taxes.netIncome.toFixed(2),
+               (taxes.effectiveTaxRate * 100).toFixed(1) + '%');
+    }
+    return row;
+  });
   const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
